@@ -1,0 +1,15 @@
+{
+  "name": "natours-project",
+  "version": "1.0.0",
+  "description": "Natours is an advanced project built with using nodeJs, expressJs and monogoDb.",
+  "main": "server.js",
+  "scripts": {
+    "start": "nodemon server.js"
+  },
+  "author": "Muhammad Saif",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.19.2",
+    "morgan": "^1.10.0"
+  }
+}
