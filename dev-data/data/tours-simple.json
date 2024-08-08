@@ -135,5 +135,12 @@
     "startDates": ["2021-12-16,10:00", "2022-01-16,10:00", "2022-12-12,10:00"]
   },
   { "id": 9, "name": "The Disneyland", "duration": 5, "difficulty": "easy" },
-  { "id": 10, "name": "The Wonderland", "duration": 5, "difficulty": "easy" }
+  { "id": 10, "name": "The Wonderland", "duration": 5, "difficulty": "easy" },
+  {
+    "id": 11,
+    "name": "The motherland",
+    "price": 100,
+    "duration": 3,
+    "difficulty": "hard"
+  }
 ]
