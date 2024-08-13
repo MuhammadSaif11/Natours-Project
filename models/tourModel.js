@@ -84,16 +84,16 @@ tourSchema.virtual('durationWeeks').get(function () {
   return this.duration / 7;
 });
 
-tourSchema.pre('save', function (next) {
-  console.log(this);
-  next();
-});
+// tourSchema.pre('save', function (next) {
+//   console.log(this);
+//   next();
+// });
 
 // eslint-disable-next-line prefer-arrow-callback
-tourSchema.post('save', function (doc, next) {
-  console.log(doc);
-  next();
-});
+// tourSchema.post('save', function (doc, next) {
+//   console.log(doc);
+//   next();
+// });
 
 tourSchema.pre(/^find/, function (next) {
   this.find({ secretTour: { $ne: true } });
@@ -102,11 +102,11 @@ tourSchema.pre(/^find/, function (next) {
 });
 
 // eslint-disable-next-line prefer-arrow-callback
-tourSchema.post(/^find/, function (docs, next) {
-  // console.log(docs);
-  console.log(Date.now() - this.start);
-  next();
-});
+// tourSchema.post(/^find/, function (docs, next) {
+//   // console.log(docs);
+//   console.log(Date.now() - this.start);
+//   next();
+// });
 
 // eslint-disable-next-line prefer-arrow-callback
 tourSchema.pre('aggregate', function (next) {
