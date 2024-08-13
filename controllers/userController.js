@@ -43,7 +43,7 @@ exports.getUser = (req, res) => {
   const id = req.params.userId;
   const user = users.find((u) => u._id === id);
   res.status(200).json({
-    status: 'success',
+    status: 'successss',
     requestedAt: req.requestTime,
     data: {
       user,
