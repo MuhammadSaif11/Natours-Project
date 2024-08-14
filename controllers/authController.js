@@ -3,18 +3,34 @@ const User = require('../models/userModel');
 const catchAsync = require('../utilities/catchAsync');
 const AppError = require('../utilities/AppError');
 const sendEmail = require('../utilities/email');
+const crypto = require('crypto');
 
 const generateToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN,
   });
 
+const sendToken = (req, res, statusCode, user) => {
+  const token = generateToken(user._id);
+
+  if (user.password) user.password = undefined;
+
+  res.status(statusCode).json({
+    status: 'success',
+    requestedAt: req.requesteTime,
+    token,
+    data: {
+      user,
+    },
+  });
+};
+
 exports.signup = catchAsync(async (req, res, next) => {
   const newUser = await User.create({
     name: req.body.name,
     email: req.body.email,
     role: req.body.role,
-    photo: req.body.photo ? req.body.photo : undefined,
+    photo: req.body.photo,
     password: req.body.password,
     passwordConfirm: req.body.passwordConfirm,
     passwordChangedAt: req.body.passwordChangedAt,
@@ -22,16 +38,7 @@ exports.signup = catchAsync(async (req, res, next) => {
 
   const { password, __v, ...user } = newUser.toObject();
 
-  const token = generateToken(newUser._id);
-
-  res.status(201).json({
-    requestedAt: req.requesteTime,
-    status: 'success',
-    token,
-    data: {
-      user,
-    },
-  });
+  sendToken(req, res, 201, newUser);
 });
 
 exports.login = catchAsync(async (req, res, next) => {
@@ -45,13 +52,7 @@ exports.login = catchAsync(async (req, res, next) => {
   if (!user || !(await user.matchPassword(password, user.password)))
     return next(new AppError('Invalid password or email', 401));
 
-  const token = generateToken(user._id);
-
-  res.status(200).json({
-    status: 'success',
-    requestedAt: req.requesteTime,
-    token,
-  });
+  sendToken(req, res, 200, user);
 });
 
 exports.protect = catchAsync(async (req, res, next) => {
@@ -121,7 +122,7 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
     await sendEmail({
       email: user.email,
       subject: 'forgot password link (valid for 10 mins)',
-      text: message
+      text: message,
     });
 
     res.status(200).json({
@@ -137,4 +138,43 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
       500,
     );
   }
+});
+
+exports.resetPassword = catchAsync(async (req, res, next) => {
+  const hashedToken = crypto
+    .createHash('sha256')
+    .update(req.params.token)
+    .digest('hex');
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gte: Date.now() },
+  });
+  if (!user) {
+    return next(
+      new AppError('The link is invalid or expired! Please try again.'),
+      400,
+    );
+  }
+  const { password, passwordConfirm } = req.body;
+  user.password = password;
+  user.passwordConfirm = passwordConfirm;
+  user.passwordResetExpires = undefined;
+  user.passwordResetToken = undefined;
+  await user.save();
+
+  sendToken(req, res, 200, user);
+});
+
+exports.updatePassword = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.user._id).select('+password');
+  if (!(await user.matchPassword(req.body.currentPassword, user.password))) {
+    return next(new AppError('Invalid password!'), 401);
+  }
+
+  const { newPassword, newPasswordConfirm } = req.body;
+
+  user.password = newPassword;
+  user.passwordConfirm = newPasswordConfirm;
+  await user.save();
+  sendToken(req, res, 200, user);
 });

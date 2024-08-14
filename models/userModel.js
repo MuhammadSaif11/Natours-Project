@@ -33,8 +33,11 @@ const userSchema = mongoose.Schema({
     type: String,
     required: [true, 'please confirm your password'],
     select: false,
-    validate: function (value) {
-      return this.password === value;
+    validate: {
+      validator: function (value) {
+        return this.password === value;
+      },
+      message: 'password does not match with password confirmation',
     },
   },
   passwordChangedAt: {
@@ -46,6 +49,11 @@ const userSchema = mongoose.Schema({
   passwordResetExpires: {
     type: Date,
   },
+  active: {
+    type: Boolean,
+    default: true,
+    select: false,
+  },
 });
 
 userSchema.pre('save', async function (next) {
@@ -55,12 +63,26 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
+userSchema.pre('save', function (next) {
+  if (!this.isModified('password') || this.isNew) return next();
+  this.passwordChangedAt = Date.now() - 1;
+  next();
+});
+
+userSchema.pre(/find/, function (next) {
+  this.find({ active: { $ne: false } });
+  next();
+});
+
 userSchema.methods.matchPassword = async (candidatePassword, userPassword) =>
   await bcrypt.compare(candidatePassword, userPassword);
 
 userSchema.methods.passwordChangedAfter = function (JWTTimestamp) {
   if (this.passwordChangedAt) {
-    const changedTimestamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
+    const changedTimestamp = parseInt(
+      this.passwordChangedAt.getTime() / 1000,
+      10,
+    );
     return changedTimestamp > JWTTimestamp;
   }
   return false;
@@ -69,7 +91,10 @@ userSchema.methods.passwordChangedAfter = function (JWTTimestamp) {
 userSchema.methods.createResetPasswordToken = function () {
   const resetPasswordToken = crypto.randomBytes(32).toString('hex');
 
-  this.passwordResetToken = crypto.createHash('sha256').update(resetPasswordToken).digest('hex');
+  this.passwordResetToken = crypto
+    .createHash('sha256')
+    .update(resetPasswordToken)
+    .digest('hex');
 
   this.passwordResetExpires = Date.now() + 10 * 60 * 1000;
 
