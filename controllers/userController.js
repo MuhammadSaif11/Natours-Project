@@ -1,11 +1,22 @@
 const User = require('../models/userModel');
-const fs = require('fs');
+const factory = require('./handlerFactory');
 const AppError = require('../utilities/AppError');
 const catchAsync = require('../utilities/catchAsync');
 
 // const users = JSON.parse(
 //   fs.readFileSync(`${__dirname}/../dev-data/data/users.json`),
 // );
+
+exports.getMe = (req, res, next) => {
+  req.params.id = req.user._id;
+  next()
+  // const { user } = req;
+  // res.status(200).json({
+  //   data: {
+  //     user,
+  //   },
+  // });
+};
 
 exports.updateMe = catchAsync(async (req, res, next) => {
   if (req.body.password || req.body.passwordConfirm) {
@@ -48,17 +59,10 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.getUsers = catchAsync(async (req, res) => {
-  const users = await User.find();
-  res.status(200).json({
-    status: 'success',
-    requestedAt: req.requestTime,
-    results: users.length,
-    data: {
-      users,
-    },
-  });
-});
+exports.getUsers = factory.getAll(User);
+exports.deleteUser = factory.deleteOne(User);
+exports.updateUser = factory.updateOne(User);
+exports.getUser = factory.getOne(User);
 
 // exports.getUser = (req, res) => {
 //   const id = req.params.userId;

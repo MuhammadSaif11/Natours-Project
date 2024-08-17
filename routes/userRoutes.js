@@ -18,6 +18,22 @@ router
 router
   .route('/deleteMe')
   .delete(authController.protect, userController.deleteMe);
+router
+  .route('/me')
+  .get(authController.protect, userController.getMe, userController.getUser);
+router
+  .route('/:id')
+  .delete(
+    authController.protect,
+    authController.restrictTo('admin'),
+    userController.deleteUser,
+  )
+  .patch(
+    authController.protect,
+    authController.restrictTo('admin'),
+    userController.updateUser,
+  )
+  .get(userController.getUser);
 
 // router.param('userId', userController.checkId);
 router.route('/').get(authController.protect, userController.getUsers);
