@@ -5,7 +5,7 @@ const AppError = require('../utilities/AppError');
 
 exports.setTourUserIds = (req, res, next) => {
   if (!req.body.user) req.body.user = req.user.id;
-  if (!req.body.tour) req.body.tour = req.params.tourId;
+  if (!req.body.tour) req.body.tour = req.params.id;
   next();
 };
 
