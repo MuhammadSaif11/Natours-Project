@@ -4,6 +4,7 @@ const morgan = require('morgan');
 const tourRouter = require('./routes/tourRoutes');
 const userRouter = require('./routes/userRoutes');
 const reviewRouter = require('./routes/reviewRoutes');
+const viewRouter = require('./routes/viewRoutes');
 const globalHandler = require('./controllers/errorController');
 const AppError = require('./utilities/AppError');
 const rateLimit = require('express-rate-limit');
@@ -66,13 +67,7 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-app.get('/', (req, res) => {
-  res.status(200).render('base',{
-    tour: 'The Forest Hiker',
-    user: 'Saif'
-  });
-});
-
+app.use('/', viewRouter);
 //routes
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);

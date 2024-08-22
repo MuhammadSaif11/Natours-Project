@@ -1,4 +1,5 @@
 const { mongoose } = require('mongoose');
+const slugify = require('slugify');
 
 const tourSchema = mongoose.Schema(
   {
@@ -10,6 +11,7 @@ const tourSchema = mongoose.Schema(
       maxLength: [40, 'A tour name must be at maximum of 40 characters'],
       minLength: [10, 'A tour name must be at least of 10 characters'],
     },
+    slug: String,
     duration: {
       type: Number,
       required: [true, 'A tour must have a duration'],
@@ -136,6 +138,13 @@ tourSchema.virtual('reviews', {
 //   console.log(doc);
 //   next();
 // });
+
+tourSchema.pre('save', function (next) {
+  this.slug = slugify(this.name, {
+    lower: true,
+  });
+  next();
+});
 
 tourSchema.pre(/^find/, function (next) {
   this.find({ secretTour: { $ne: true } });
