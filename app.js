@@ -14,6 +14,7 @@ const santizer = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const hpp = require('hpp');
 const cookie = require('cookie-parser');
+const compression = require('compression');
 
 const app = express();
 
@@ -59,6 +60,8 @@ app.use(
     ],
   }),
 );
+
+app.use(compression());
 
 //development logging
 if (process.env.NODE_ENV === 'development') {
