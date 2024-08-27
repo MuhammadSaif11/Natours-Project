@@ -2,9 +2,9 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
 const catchAsync = require('../utilities/catchAsync');
 const AppError = require('../utilities/AppError');
-const sendEmail = require('../utilities/email');
+const Email = require('../utilities/email');
 const crypto = require('crypto');
-const rateLimit = require('express-rate-limit');
+const { promisify } = require('util');
 
 const generateToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -37,16 +37,22 @@ const sendToken = (req, res, statusCode, user) => {
   });
 };
 
-exports.signup = catchAsync(async (req, res, next) => {
-  const newUser = await User.create({
-    name: req.body.name,
-    email: req.body.email,
-    role: req.body.role,
-    photo: req.body.photo,
-    password: req.body.password,
-    passwordConfirm: req.body.passwordConfirm,
-    passwordChangedAt: req.body.passwordChangedAt,
+exports.logout = (req, res, next) => {
+  res.cookie('jwt', 'loggedOut', {
+    expires: new Date(Date.now() + 10 * 1000),
+    httpOnly: true,
   });
+
+  res.status(200).json({
+    status: 'success',
+  });
+};
+
+exports.signup = catchAsync(async (req, res, next) => {
+  const newUser = await User.create(req.body);
+
+  const url = `${req.protocol}://${req.get('host')}/me`;
+  await new Email(newUser, url).sendWelcome();
 
   sendToken(req, res, 201, newUser);
 });
@@ -72,6 +78,8 @@ exports.protect = catchAsync(async (req, res, next) => {
     req.headers.authorization.startsWith('Bearer')
   ) {
     token = req.headers.authorization.split(' ')[1];
+  } else if (req.cookies.jwt) {
+    token = req.cookies.jwt;
   }
   if (!token) {
     return next(
@@ -98,6 +106,29 @@ exports.protect = catchAsync(async (req, res, next) => {
   next();
 });
 
+exports.isLoggedIn = async (req, res, next) => {
+  if (req.cookies.jwt) {
+    try {
+      const decoded = await promisify(jwt.verify)(
+        req.cookies.jwt,
+        process.env.JWT_SECRET,
+      );
+
+      const currentUser = await User.findById(decoded.id);
+
+      if (!currentUser) return next();
+
+      if (currentUser.passwordChangedAfter(decoded.iat)) return next();
+
+      res.locals.user = currentUser;
+      return next();
+    } catch (e) {
+      return next();
+    }
+  }
+  next();
+};
+
 exports.restrictTo =
   (...roles) =>
   (req, res, next) => {
@@ -122,18 +153,9 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
 
   await user.save({ validateBeforeSave: false });
 
-  const resetUrl = `${req.protocol}://${req.get('host')}/api/v1/users/resetPassword/${resetPasswordToken}`;
-
-  const message = `Forgot your password? click on the below url to change your password.
-  \n${resetUrl}
-  \nIf you did not ask for this request please ignore this email`;
-
   try {
-    await sendEmail({
-      email: user.email,
-      subject: 'forgot password link (valid for 10 mins)',
-      text: message,
-    });
+    const resetUrl = `${req.protocol}://${req.get('host')}/api/v1/users/resetPassword/${resetPasswordToken}`;
+    await new Email(user, resetUrl).sendPasswordReset();
 
     res.status(200).json({
       status: 'success',
