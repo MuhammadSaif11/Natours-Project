@@ -15,10 +15,23 @@ const xss = require('xss-clean');
 const hpp = require('hpp');
 const cookie = require('cookie-parser');
 const compression = require('compression');
+const cors = require('cors');
 
 const app = express();
 
 // ************ MIDDEWARES ******************
+
+// Implement Cors
+app.use(cors());
+// for specific url
+// app.use(
+//   cors({
+//     origin: 'some url',
+//   }),
+// );
+
+app.options('*', cors());
+// app.options('/api/v1/tours/:id', cors());
 
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
